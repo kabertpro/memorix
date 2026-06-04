@@ -1,16 +1,154 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0a0e2a" />
-    <title>MEMORIX — Escucha, recuerda y responde</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="theme-color" content="#0a0f1e" />
+  <title>MEMORIX — Kabert Studio</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- ░░ PARTÍCULAS ░░ -->
+  <canvas id="particles"></canvas>
+
+  <!-- ░░ PANTALLA: AUTH ░░ -->
+  <div id="screen-auth" class="screen active">
+    <div class="auth-container">
+      <div class="logo-box">
+        <div class="logo-symbol">♩</div>
+        <h1 class="logo-title">MEMORIX</h1>
+        <p class="logo-sub">Escucha · Recuerda · Responde</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="tab-btn active" id="tab-login" onclick="switchTab('login')">Ingresar</button>
+        <button class="tab-btn" id="tab-register" onclick="switchTab('register')">Registrar</button>
+      </div>
+
+      <div id="form-login" class="auth-form">
+        <div class="input-group">
+          <label>Usuario</label>
+          <input type="text" id="login-user" placeholder="tu_usuario" autocomplete="username" />
+        </div>
+        <div class="input-group">
+          <label>Contraseña</label>
+          <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" />
+        </div>
+        <button class="btn-primary" onclick="handleLogin()">⟶ Ingresar</button>
+        <p class="auth-msg" id="login-msg"></p>
+      </div>
+
+      <div id="form-register" class="auth-form hidden">
+        <div class="input-group">
+          <label>Usuario</label>
+          <input type="text" id="reg-user" placeholder="tu_usuario" autocomplete="username" />
+        </div>
+        <div class="input-group">
+          <label>Contraseña</label>
+          <input type="password" id="reg-pass" placeholder="••••••••" autocomplete="new-password" />
+        </div>
+        <button class="btn-primary" onclick="handleRegister()">✦ Registrar</button>
+        <p class="auth-msg" id="reg-msg"></p>
+      </div>
+
+      <p class="credit">Kabert Studio — LMKE</p>
+    </div>
+  </div>
+
+  <!-- ░░ PANTALLA: MENÚ ░░ -->
+  <div id="screen-menu" class="screen">
+    <div class="menu-container">
+      <div class="logo-box">
+        <div class="logo-symbol">♩</div>
+        <h1 class="logo-title">MEMORIX</h1>
+      </div>
+      <p class="welcome-text">Bienvenido, <span id="menu-username"></span></p>
+      <div class="menu-buttons">
+        <button class="btn-primary btn-big" onclick="startGame()">▶ Jugar</button>
+        <button class="btn-secondary btn-big" onclick="showRanking()">⭐ Ranking</button>
+        <button class="btn-outline btn-big" onclick="logout()">✕ Cerrar Sesión</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ░░ PANTALLA: JUEGO ░░ -->
+  <div id="screen-game" class="screen">
+    <div class="game-header">
+      <div class="hud-item">
+        <span class="hud-label">NIVEL</span>
+        <span class="hud-val" id="hud-level">1</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">PUNTOS</span>
+        <span class="hud-val" id="hud-score">0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">VIDAS</span>
+        <span class="hud-val" id="hud-lives">❤️❤️❤️</span>
+      </div>
+    </div>
+
+    <div class="round-info">
+      Ronda <span id="hud-round">1</span>/5
+    </div>
+
+    <!-- Pentagrama -->
+    <div class="staff-wrapper">
+      <div class="staff" id="staff">
+        <div class="staff-lines">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </div>
+        <div class="note-display" id="note-display">
+          <div class="note-head" id="note-head"></div>
+          <div class="note-stem" id="note-stem"></div>
+          <div class="note-name" id="note-name"></div>
+          <!-- Ledger lines (DO, SI extra) -->
+          <div class="ledger-line" id="ledger-below" style="display:none"></div>
+          <div class="ledger-line" id="ledger-above" style="display:none"></div>
+        </div>
+      </div>
+      <div class="clef">𝄞</div>
+    </div>
+
+    <div class="feedback-flash" id="feedback-flash"></div>
+
+    <!-- Botones de respuesta -->
+    <div class="answer-buttons" id="answer-buttons">
+      <!-- generado por JS -->
+    </div>
+  </div>
+
+  <!-- ░░ PANTALLA: GAME OVER ░░ -->
+  <div id="screen-gameover" class="screen">
+    <div class="gameover-container">
+      <div class="gameover-icon">💀</div>
+      <h2 class="gameover-title">GAME OVER</h2>
+      <p class="gameover-score">Puntaje Final: <span id="final-score">0</span></p>
+      <p class="gameover-level">Llegaste al Nivel <span id="final-level">1</span></p>
+      <button class="btn-primary btn-big" onclick="startGame()">↺ Reintentar</button>
+      <button class="btn-secondary btn-big" onclick="showMenu()">⌂ Menú</button>
+    </div>
+  </div>
+
+  <!-- ░░ PANTALLA: RANKING ░░ -->
+  <div id="screen-ranking" class="screen">
+    <div class="ranking-container">
+      <h2 class="ranking-title">⭐ TOP 20</h2>
+      <div class="ranking-list" id="ranking-list">
+        <div class="loading">Cargando...</div>
+      </div>
+      <button class="btn-outline btn-big" onclick="showMenu()" style="margin-top:2rem">⟵ Volver</button>
+    </div>
+  </div>
+
+  <script type="module" src="script.js"></script>
+</body>
 </html>
