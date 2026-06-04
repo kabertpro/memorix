@@ -1,17 +1,9 @@
-// firebase.js — Memorix by Kabert Studio - LMKE
+// firebase.js — Memorix v2 · Kabert Studio - LMKE
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getFirestore,
-  collection,
-  doc,
-  getDoc,
-  setDoc,
-  getDocs,
-  updateDoc,
-  query,
-  orderBy,
-  limit
+  getFirestore, collection, doc, getDoc, setDoc, getDocs,
+  updateDoc, query, orderBy, limit
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -24,20 +16,21 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const db  = getFirestore(app);
 
-// ── AUTH ──────────────────────────────────────────────────────────────────────
-
+// ── AUTH ──────────────────────────────────────────────────────
 export async function registrarUsuario(usuario, password) {
-  const ref = doc(db, "usuarios", usuario);
+  const ref  = doc(db, "usuarios", usuario);
   const snap = await getDoc(ref);
   if (snap.exists()) throw new Error("El usuario ya existe.");
-  await setDoc(ref, { usuario, password, mejorPuntaje: 0 });
-  return { usuario, mejorPuntaje: 0 };
+  const data = { usuario, password, mejorPuntaje: 0,
+    puntajes: { clasico:0, contrareloj:0, superviviente:0 } };
+  await setDoc(ref, data);
+  return data;
 }
 
 export async function loginUsuario(usuario, password) {
-  const ref = doc(db, "usuarios", usuario);
+  const ref  = doc(db, "usuarios", usuario);
   const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error("Usuario no encontrado.");
   const data = snap.data();
@@ -45,24 +38,30 @@ export async function loginUsuario(usuario, password) {
   return data;
 }
 
-// ── RANKING ───────────────────────────────────────────────────────────────────
-
-export async function guardarPuntaje(usuario, puntaje) {
-  const ref = doc(db, "usuarios", usuario);
+// ── PUNTAJES ──────────────────────────────────────────────────
+export async function guardarPuntaje(usuario, puntaje, mode = "clasico") {
+  const ref  = doc(db, "usuarios", usuario);
   const snap = await getDoc(ref);
   if (!snap.exists()) return;
-  const actual = snap.data().mejorPuntaje || 0;
-  if (puntaje > actual) {
-    await updateDoc(ref, { mejorPuntaje: puntaje });
+  const data    = snap.data();
+  const current = data.puntajes?.[mode] || 0;
+  const overall = data.mejorPuntaje || 0;
+  if (puntaje > current || puntaje > overall) {
+    const update = { mejorPuntaje: Math.max(overall, puntaje) };
+    if (puntaje > current) update[`puntajes.${mode}`] = puntaje;
+    await updateDoc(ref, update);
   }
 }
 
-export async function obtenerRanking() {
-  const q = query(
-    collection(db, "usuarios"),
-    orderBy("mejorPuntaje", "desc"),
-    limit(20)
-  );
+// ── RANKING ───────────────────────────────────────────────────
+export async function obtenerRanking(mode = "clasico") {
+  // Ordenar por el puntaje del modo si existe, si no por mejorPuntaje
+  const q = query(collection(db, "usuarios"),
+    orderBy("mejorPuntaje", "desc"), limit(20));
   const snap = await getDocs(q);
-  return snap.docs.map((d, i) => ({ pos: i + 1, ...d.data() }));
+  const rows = snap.docs.map((d, i) => ({ pos: i+1, ...d.data() }));
+  // Re-ordenar por puntaje del modo específico
+  rows.sort((a,b) => (b.puntajes?.[mode]||0) - (a.puntajes?.[mode]||0));
+  rows.forEach((r,i) => r.pos = i+1);
+  return rows;
 }

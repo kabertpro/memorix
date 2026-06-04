@@ -12,143 +12,203 @@
 </head>
 <body>
 
-  <!-- ░░ PARTÍCULAS ░░ -->
-  <canvas id="particles"></canvas>
+<canvas id="particles"></canvas>
 
-  <!-- ░░ PANTALLA: AUTH ░░ -->
-  <div id="screen-auth" class="screen active">
-    <div class="auth-container">
-      <div class="logo-box">
-        <div class="logo-symbol">♩</div>
-        <h1 class="logo-title">MEMORIX</h1>
-        <p class="logo-sub">Escucha · Recuerda · Responde</p>
+<!-- ░░ AUTH ░░ -->
+<div id="screen-auth" class="screen active">
+  <div class="auth-container">
+    <div class="logo-box">
+      <div class="logo-symbol">♩</div>
+      <h1 class="logo-title">MEMORIX</h1>
+      <p class="logo-sub">Escucha · Recuerda · Responde</p>
+    </div>
+    <div class="auth-tabs">
+      <button class="tab-btn active" id="tab-login" onclick="switchTab('login')">Ingresar</button>
+      <button class="tab-btn" id="tab-register" onclick="switchTab('register')">Registrar</button>
+    </div>
+    <div id="form-login" class="auth-form">
+      <div class="input-group"><label>Usuario</label><input type="text" id="login-user" placeholder="tu_usuario" autocomplete="username"/></div>
+      <div class="input-group"><label>Contraseña</label><input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"/></div>
+      <button class="btn-primary" onclick="handleLogin()">⟶ Ingresar</button>
+      <p class="auth-msg" id="login-msg"></p>
+    </div>
+    <div id="form-register" class="auth-form hidden">
+      <div class="input-group"><label>Usuario</label><input type="text" id="reg-user" placeholder="tu_usuario" autocomplete="username"/></div>
+      <div class="input-group"><label>Contraseña</label><input type="password" id="reg-pass" placeholder="••••••••" autocomplete="new-password"/></div>
+      <button class="btn-primary" onclick="handleRegister()">✦ Registrar</button>
+      <p class="auth-msg" id="reg-msg"></p>
+    </div>
+    <p class="credit">Kabert Studio — LMKE</p>
+  </div>
+</div>
+
+<!-- ░░ MENÚ ░░ -->
+<div id="screen-menu" class="screen">
+  <div class="menu-container">
+    <div class="logo-box">
+      <div class="logo-symbol">♩</div>
+      <h1 class="logo-title">MEMORIX</h1>
+    </div>
+    <p class="welcome-text">Bienvenido, <span id="menu-username"></span></p>
+    <div class="menu-buttons">
+      <button class="btn-primary btn-big" onclick="showModeSelect()">▶ Jugar</button>
+      <button class="btn-secondary btn-big" onclick="showRanking()">⭐ Ranking</button>
+      <button class="btn-outline btn-big" onclick="logout()">✕ Cerrar Sesión</button>
+    </div>
+  </div>
+</div>
+
+<!-- ░░ SELECCIÓN DE MODO ░░ -->
+<div id="screen-modeselect" class="screen">
+  <div class="modeselect-container">
+    <h2 class="section-title">Modo de Juego</h2>
+
+    <div class="mode-cards">
+      <div class="mode-card" data-mode="clasico" onclick="selectMode('clasico')">
+        <div class="mode-icon">🎵</div>
+        <div class="mode-name">Clásico</div>
+        <div class="mode-desc">5 rondas por nivel.<br>Sube de nivel automáticamente.<br>3 vidas.</div>
+        <div class="mode-pts">+10 pts por acierto</div>
       </div>
-
-      <div class="auth-tabs">
-        <button class="tab-btn active" id="tab-login" onclick="switchTab('login')">Ingresar</button>
-        <button class="tab-btn" id="tab-register" onclick="switchTab('register')">Registrar</button>
+      <div class="mode-card" data-mode="entrenamiento" onclick="selectMode('entrenamiento')">
+        <div class="mode-icon">📚</div>
+        <div class="mode-name">Entrenamiento</div>
+        <div class="mode-desc">Sin vidas ni límite.<br>Elige qué notas practicar.<br>Ve a tu ritmo.</div>
+        <div class="mode-pts">Sin puntuación</div>
       </div>
-
-      <div id="form-login" class="auth-form">
-        <div class="input-group">
-          <label>Usuario</label>
-          <input type="text" id="login-user" placeholder="tu_usuario" autocomplete="username" />
-        </div>
-        <div class="input-group">
-          <label>Contraseña</label>
-          <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" />
-        </div>
-        <button class="btn-primary" onclick="handleLogin()">⟶ Ingresar</button>
-        <p class="auth-msg" id="login-msg"></p>
+      <div class="mode-card" data-mode="contrareloj" onclick="selectMode('contrareloj')">
+        <div class="mode-icon">⏱️</div>
+        <div class="mode-name">Contrarreloj</div>
+        <div class="mode-desc">60 segundos.<br>Responde lo más rápido posible.<br>Bonus por velocidad.</div>
+        <div class="mode-pts">+10~+25 pts (velocidad)</div>
       </div>
-
-      <div id="form-register" class="auth-form hidden">
-        <div class="input-group">
-          <label>Usuario</label>
-          <input type="text" id="reg-user" placeholder="tu_usuario" autocomplete="username" />
-        </div>
-        <div class="input-group">
-          <label>Contraseña</label>
-          <input type="password" id="reg-pass" placeholder="••••••••" autocomplete="new-password" />
-        </div>
-        <button class="btn-primary" onclick="handleRegister()">✦ Registrar</button>
-        <p class="auth-msg" id="reg-msg"></p>
+      <div class="mode-card" data-mode="superviviente" onclick="selectMode('superviviente')">
+        <div class="mode-icon">💀</div>
+        <div class="mode-name">Superviviente</div>
+        <div class="mode-desc">1 sola vida.<br>Todas las notas desde el inicio.<br>¿Cuánto aguantas?</div>
+        <div class="mode-pts">+15 pts — sin errores</div>
       </div>
+    </div>
 
-      <p class="credit">Kabert Studio — LMKE</p>
+    <!-- Dificultad -->
+    <div class="diff-section" id="diff-section">
+      <h3 class="diff-title">Dificultad</h3>
+      <div class="diff-buttons">
+        <button class="diff-btn active" data-diff="facil"  onclick="selectDiff('facil')">😊 Fácil</button>
+        <button class="diff-btn"        data-diff="normal" onclick="selectDiff('normal')">😤 Normal</button>
+        <button class="diff-btn"        data-diff="dificil" onclick="selectDiff('dificil')">💀 Difícil</button>
+      </div>
+      <p class="diff-desc" id="diff-desc"></p>
+    </div>
+
+    <!-- Config entrenamiento -->
+    <div class="train-section hidden" id="train-section">
+      <h3 class="diff-title">Notas a practicar</h3>
+      <div class="train-note-picker" id="train-note-picker"></div>
+    </div>
+
+    <div class="modeselect-actions">
+      <button class="btn-primary btn-big" id="btn-start-mode" onclick="launchGame()">▶ Comenzar</button>
+      <button class="btn-outline" onclick="showMenu()">⟵ Volver</button>
+    </div>
+  </div>
+</div>
+
+<!-- ░░ JUEGO ░░ -->
+<div id="screen-game" class="screen">
+  <div class="game-header">
+    <div class="hud-item">
+      <span class="hud-label" id="hud-label-a">NIVEL</span>
+      <span class="hud-val" id="hud-level">1</span>
+    </div>
+    <div class="hud-item hud-center" id="hud-timer-wrap" style="display:none">
+      <span class="hud-label">TIEMPO</span>
+      <span class="hud-val hud-timer" id="hud-timer">60</span>
+    </div>
+    <div class="hud-item">
+      <span class="hud-label">PUNTOS</span>
+      <span class="hud-val" id="hud-score">0</span>
+    </div>
+    <div class="hud-item" id="hud-lives-wrap">
+      <span class="hud-label">VIDAS</span>
+      <span class="hud-val" id="hud-lives">❤️❤️❤️</span>
     </div>
   </div>
 
-  <!-- ░░ PANTALLA: MENÚ ░░ -->
-  <div id="screen-menu" class="screen">
-    <div class="menu-container">
-      <div class="logo-box">
-        <div class="logo-symbol">♩</div>
-        <h1 class="logo-title">MEMORIX</h1>
-      </div>
-      <p class="welcome-text">Bienvenido, <span id="menu-username"></span></p>
-      <div class="menu-buttons">
-        <button class="btn-primary btn-big" onclick="startGame()">▶ Jugar</button>
-        <button class="btn-secondary btn-big" onclick="showRanking()">⭐ Ranking</button>
-        <button class="btn-outline btn-big" onclick="logout()">✕ Cerrar Sesión</button>
-      </div>
-    </div>
+  <div class="mode-badge-row">
+    <span class="mode-badge" id="mode-badge">CLÁSICO</span>
+    <span class="diff-badge" id="diff-badge">NORMAL</span>
+    <span class="round-info">Ronda <span id="hud-round">1</span>/5</span>
   </div>
 
-  <!-- ░░ PANTALLA: JUEGO ░░ -->
-  <div id="screen-game" class="screen">
-    <div class="game-header">
-      <div class="hud-item">
-        <span class="hud-label">NIVEL</span>
-        <span class="hud-val" id="hud-level">1</span>
-      </div>
-      <div class="hud-item">
-        <span class="hud-label">PUNTOS</span>
-        <span class="hud-val" id="hud-score">0</span>
-      </div>
-      <div class="hud-item">
-        <span class="hud-label">VIDAS</span>
-        <span class="hud-val" id="hud-lives">❤️❤️❤️</span>
-      </div>
-    </div>
-
-    <div class="round-info">
-      Ronda <span id="hud-round">1</span>/5
-    </div>
-
-    <!-- Pentagrama -->
-    <div class="staff-wrapper">
-      <div class="staff" id="staff">
-        <div class="staff-lines">
-          <div class="line"></div>
-          <div class="line"></div>
-          <div class="line"></div>
-          <div class="line"></div>
-          <div class="line"></div>
-        </div>
-        <div class="note-display" id="note-display">
-          <div class="note-head" id="note-head"></div>
-          <div class="note-stem" id="note-stem"></div>
-          <div class="note-name" id="note-name"></div>
-          <!-- Ledger lines (DO, SI extra) -->
-          <div class="ledger-line" id="ledger-below" style="display:none"></div>
-          <div class="ledger-line" id="ledger-above" style="display:none"></div>
-        </div>
-      </div>
-      <div class="clef">𝄞</div>
-    </div>
-
-    <div class="feedback-flash" id="feedback-flash"></div>
-
-    <!-- Botones de respuesta -->
-    <div class="answer-buttons" id="answer-buttons">
-      <!-- generado por JS -->
-    </div>
+  <!-- SVG Pentagrama -->
+  <div class="staff-wrapper">
+    <svg id="staff-svg" viewBox="0 0 340 160" xmlns="http://www.w3.org/2000/svg">
+      <!-- Clave de Sol -->
+      <text x="14" y="110" font-size="88" fill="#f0b429" font-family="serif" opacity="0.9">𝄞</text>
+      <!-- 5 líneas del pentagrama -->
+      <!-- Línea 1 (superior) y=30, Línea 2 y=50, Línea 3 y=70, Línea 4 y=90, Línea 5 (inferior) y=110 -->
+      <line x1="60" x2="320" y1="30"  y2="30"  stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+      <line x1="60" x2="320" y1="50"  y2="50"  stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+      <line x1="60" x2="320" y1="70"  y2="70"  stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+      <line x1="60" x2="320" y1="90"  y2="90"  stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+      <line x1="60" x2="320" y1="110" y2="110" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+      <!-- Nota (posicionada por JS) -->
+      <!-- Ledger lines extras (visibilidad controlada por JS) -->
+      <line id="svg-ledger-lo2" x1="170" x2="210" y1="130" y2="130" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" display="none"/>
+      <line id="svg-ledger-lo1" x1="170" x2="210" y1="130" y2="130" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" display="none"/>
+      <line id="svg-ledger-hi1" x1="170" x2="210" y1="10"  y2="10"  stroke="rgba(255,255,255,0.4)" stroke-width="1.5" display="none"/>
+      <!-- Plica (stem) -->
+      <line id="svg-stem" x1="200" x2="200" y1="70" y2="30" stroke="#ffd166" stroke-width="2.5" stroke-linecap="round" display="none"/>
+      <!-- Cabeza de nota -->
+      <ellipse id="svg-note-head" cx="190" cy="70" rx="12" ry="9" fill="#ffd166" transform="rotate(-15 190 70)" filter="url(#glow)" display="none"/>
+      <!-- Label de la nota (aparece durante 2s) -->
+      <text id="svg-note-label" x="190" y="150" text-anchor="middle" font-family="Orbitron,monospace" font-size="13" fill="#f0b429" display="none"></text>
+      <!-- Filtro glow -->
+      <defs>
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+    </svg>
   </div>
 
-  <!-- ░░ PANTALLA: GAME OVER ░░ -->
-  <div id="screen-gameover" class="screen">
-    <div class="gameover-container">
-      <div class="gameover-icon">💀</div>
-      <h2 class="gameover-title">GAME OVER</h2>
-      <p class="gameover-score">Puntaje Final: <span id="final-score">0</span></p>
-      <p class="gameover-level">Llegaste al Nivel <span id="final-level">1</span></p>
-      <button class="btn-primary btn-big" onclick="startGame()">↺ Reintentar</button>
-      <button class="btn-secondary btn-big" onclick="showMenu()">⌂ Menú</button>
-    </div>
-  </div>
+  <div class="feedback-flash" id="feedback-flash"></div>
 
-  <!-- ░░ PANTALLA: RANKING ░░ -->
-  <div id="screen-ranking" class="screen">
-    <div class="ranking-container">
-      <h2 class="ranking-title">⭐ TOP 20</h2>
-      <div class="ranking-list" id="ranking-list">
-        <div class="loading">Cargando...</div>
-      </div>
-      <button class="btn-outline btn-big" onclick="showMenu()" style="margin-top:2rem">⟵ Volver</button>
-    </div>
-  </div>
+  <div class="answer-buttons" id="answer-buttons"></div>
 
-  <script type="module" src="script.js"></script>
+  <button class="btn-outline btn-sm-exit" onclick="confirmExit()">✕ Salir</button>
+</div>
+
+<!-- ░░ GAME OVER ░░ -->
+<div id="screen-gameover" class="screen">
+  <div class="gameover-container">
+    <div class="gameover-icon" id="go-icon">💀</div>
+    <h2 class="gameover-title" id="go-title">GAME OVER</h2>
+    <p class="gameover-mode" id="go-mode"></p>
+    <p class="gameover-score">Puntaje: <span id="final-score">0</span></p>
+    <p class="gameover-detail" id="go-detail"></p>
+    <button class="btn-primary btn-big" onclick="launchGame()">↺ Reintentar</button>
+    <button class="btn-secondary btn-big" onclick="showModeSelect()">⚙ Cambiar Modo</button>
+    <button class="btn-outline btn-big" onclick="showMenu()">⌂ Menú</button>
+  </div>
+</div>
+
+<!-- ░░ RANKING ░░ -->
+<div id="screen-ranking" class="screen">
+  <div class="ranking-container">
+    <h2 class="ranking-title">⭐ TOP 20</h2>
+    <div class="rank-tabs">
+      <button class="rank-tab active" onclick="loadRankingTab('clasico',this)">Clásico</button>
+      <button class="rank-tab" onclick="loadRankingTab('contrareloj',this)">Contrarreloj</button>
+      <button class="rank-tab" onclick="loadRankingTab('superviviente',this)">Superviviente</button>
+    </div>
+    <div class="ranking-list" id="ranking-list"><div class="loading">Cargando...</div></div>
+    <button class="btn-outline btn-big" onclick="showMenu()" style="margin-top:1.5rem">⟵ Volver</button>
+  </div>
+</div>
+
+<script type="module" src="script.js"></script>
 </body>
 </html>
