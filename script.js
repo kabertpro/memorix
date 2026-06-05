@@ -1,13 +1,12 @@
 // ═══════════════════════════════════════════════════════════════
-// MEMORIX — script.js v3  ·  Kabert Studio - LMKE
+// MEMORIX — script.js v4  ·  Kabert Studio - LMKE
 //
-// MECÁNICA CENTRAL:
-//   1. El juego muestra una secuencia de notas en el pentagrama
-//      (una por una, con sonido). SIN mostrar el nombre.
-//   2. El jugador reproduce la secuencia tocando los botones
-//      en el mismo orden.
-//   3. Correcto → siguiente secuencia (más larga).
-//      Error     → pierde una vida / game over.
+// MECÁNICA:
+//   • Niveles crecen en longitud de secuencia: Nivel N = N notas
+//   • Nivel 1 = 1 nota, Nivel 2 = 2 notas, etc.
+//   • Notas del pool se amplían conforme suben los niveles
+//   • Botón Replay para escuchar la secuencia de nuevo
+//   • Splash de inicio + splash de nivel completado
 // ═══════════════════════════════════════════════════════════════
 
 import { registrarUsuario, loginUsuario, guardarPuntaje, obtenerRanking } from "./firebase.js";
@@ -19,23 +18,19 @@ function getACtx() {
   return audioCtx;
 }
 
-// 14 notas: octava normal + octava aguda completa
 const NOTE_FREQ = {
-  "DO" :261.63, "RE" :293.66, "MI" :329.63, "FA" :349.23,
-  "SOL":392.00, "LA" :440.00, "SI" :493.88,
-  "DO'":523.25, "RE'":587.33, "MI'":659.25, "FA'":698.46,
-  "SOL'":783.99,"LA'":880.00, "SI'":987.77,
+  "DO" :261.63,"RE" :293.66,"MI" :329.63,"FA" :349.23,
+  "SOL":392.00,"LA" :440.00,"SI" :493.88,
+  "DO'":523.25,"RE'":587.33,"MI'":659.25,"FA'":698.46,
+  "SOL'":783.99,"LA'":880.00,"SI'":987.77,
 };
 
-function playNote(name, duration = 1.3) {
-  const ctx  = getACtx();
-  const freq = NOTE_FREQ[name];
+function playNote(name, duration = 1.1) {
+  const ctx = getACtx(), freq = NOTE_FREQ[name];
   if (!freq) return;
-  const osc  = ctx.createOscillator();
-  const gain = ctx.createGain();
+  const osc = ctx.createOscillator(), gain = ctx.createGain();
   osc.connect(gain); gain.connect(ctx.destination);
-  osc.type = "sine";
-  osc.frequency.value = freq;
+  osc.type = "sine"; osc.frequency.value = freq;
   gain.gain.setValueAtTime(0, ctx.currentTime);
   gain.gain.linearRampToValueAtTime(.4, ctx.currentTime + .03);
   gain.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + duration);
@@ -43,198 +38,167 @@ function playNote(name, duration = 1.3) {
 }
 
 function playSFX(type) {
-  const ctx  = getACtx();
-  const osc  = ctx.createOscillator();
-  const gain = ctx.createGain();
+  const ctx = getACtx();
+  const osc = ctx.createOscillator(), gain = ctx.createGain();
   osc.connect(gain); gain.connect(ctx.destination);
-  gain.gain.setValueAtTime(.25, ctx.currentTime);
+  gain.gain.setValueAtTime(.22, ctx.currentTime);
   if (type === "correct") {
-    osc.type = "square";
-    osc.frequency.setValueAtTime(880, ctx.currentTime);
-    osc.frequency.setValueAtTime(1100, ctx.currentTime + .08);
-    gain.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .3);
-    osc.start(); osc.stop(ctx.currentTime + .32);
+    osc.type="square"; osc.frequency.setValueAtTime(880,ctx.currentTime);
+    osc.frequency.setValueAtTime(1100,ctx.currentTime+.08);
+    gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.28);
+    osc.start(); osc.stop(ctx.currentTime+.3);
   } else if (type === "wrong") {
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(200, ctx.currentTime);
-    osc.frequency.linearRampToValueAtTime(90, ctx.currentTime + .32);
-    gain.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .38);
-    osc.start(); osc.stop(ctx.currentTime + .4);
+    osc.type="sawtooth"; osc.frequency.setValueAtTime(200,ctx.currentTime);
+    osc.frequency.linearRampToValueAtTime(90,ctx.currentTime+.3);
+    gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.36);
+    osc.start(); osc.stop(ctx.currentTime+.38);
   } else if (type === "levelup") {
-    [0,.11,.22].forEach((t,i) => {
-      const o = ctx.createOscillator(), g = ctx.createGain();
-      o.connect(g); g.connect(ctx.destination);
-      o.type = "square";
-      o.frequency.value = [660,880,1100][i];
-      g.gain.setValueAtTime(.18, ctx.currentTime+t);
-      g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime+t+.16);
-      o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+.18);
+    [0,.1,.2,.3].forEach((t,i)=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);o.type="square";
+      o.frequency.value=[523,659,784,1047][i];
+      g.gain.setValueAtTime(.16,ctx.currentTime+t);
+      g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+t+.18);
+      o.start(ctx.currentTime+t);o.stop(ctx.currentTime+t+.2);
+    });
+  } else if (type === "splash") {
+    // acorde de bienvenida
+    [261.63,329.63,392].forEach((f,i)=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);o.type="sine";o.frequency.value=f;
+      g.gain.setValueAtTime(0,ctx.currentTime+i*.08);
+      g.gain.linearRampToValueAtTime(.12,ctx.currentTime+i*.08+.04);
+      g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+i*.08+1.2);
+      o.start(ctx.currentTime+i*.08);o.stop(ctx.currentTime+i*.08+1.3);
     });
   }
 }
 
 // ── SVG PENTAGRAMA ───────────────────────────────────────────
-// viewBox="0 0 340 190"
-// Líneas del pentagrama: y = 40, 60, 80, 100, 120  (paso=20px)
-// Espacios intermedios:       50, 70,  90, 110
-//
-// Clave de SOL → SOL4 está EN la línea 4 desde abajo = y=100
-//
-// Desde SOL4 (y=100) subiendo de 10 en 10:
-//   LA4 = espacio 4-3 = y=90
-//   SI4 = Línea 3     = y=80
-//   DO5'= espacio 3-2 = y=70
-//   RE5'= Línea 2     = y=60
-//   MI5'= espacio 2-1 = y=50
-//   FA5'= Línea 1     = y=40
-//   SOL5'= espacio sobre L1 = y=30
-//   LA5' = y=20  (necesita ledger)
-//   SI5' = y=10  (necesita ledger)
-//
-// Bajando desde SOL4:
-//   FA4 = espacio 5-4 = y=110
-//   MI4 = Línea 5     = y=120
-//   RE4 = espacio bajo L5 = y=130   (necesita ledger y=140)
-//   DO4 = EN ledger   = y=140       (ledger adicional y=140)
-
+// viewBox="0 0 340 190"  Líneas: y=40,60,80,100,120  paso=20px
+// Clave de Sol → SOL4 en línea 4 (y=100)
+// Subiendo 10px/posición, bajando 10px/posición:
+//   SI' = y=10  (con ledger y=10)
+//   LA' = y=20  (con ledger y=10)
+//   SOL'= y=30  (espacio sobre L1)
+//   FA' = y=40  L1
+//   MI' = y=50  espacio 1-2
+//   RE' = y=60  L2
+//   DO' = y=70  espacio 2-3
+//   SI  = y=80  L3
+//   LA  = y=90  espacio 3-4
+//   SOL = y=100 L4
+//   FA  = y=110 espacio 4-5
+//   MI  = y=120 L5
+//   RE  = y=130 espacio bajo L5  (ledger y=140)
+//   DO  = y=140 EN ledger inferior (ledger y=140)
 const NOTE_SVG = {
-  // name  →  cy,   ledgers[]
-  "DO" : { cy:140, ledgers:[140]       },  // DO central: EN línea adicional inferior
-  "RE" : { cy:130, ledgers:[140]       },  // RE4: espacio bajo pentagrama, ledger visible
-  "MI" : { cy:120, ledgers:[]          },  // MI4: línea 5 (inferior)
-  "FA" : { cy:110, ledgers:[]          },  // FA4: espacio 5-4
-  "SOL": { cy:100, ledgers:[]          },  // SOL4: línea 4
-  "LA" : { cy: 90, ledgers:[]          },  // LA4: espacio 4-3
-  "SI" : { cy: 80, ledgers:[]          },  // SI4: línea 3
-  "DO'": { cy: 70, ledgers:[]          },  // DO5: espacio 3-2
-  "RE'": { cy: 60, ledgers:[]          },  // RE5: línea 2
-  "MI'": { cy: 50, ledgers:[]          },  // MI5: espacio 2-1
-  "FA'": { cy: 40, ledgers:[]          },  // FA5: línea 1
-  "SOL'":{ cy: 30, ledgers:[]          },  // SOL5: espacio sobre L1
-  "LA'": { cy: 20, ledgers:[10]        },  // LA5: sobre pentagrama, ledger y=10
-  "SI'": { cy: 10, ledgers:[10]        },  // SI5: encima de ledger y=10
+  "DO" :{cy:140,ledgers:[140]},
+  "RE" :{cy:130,ledgers:[140]},
+  "MI" :{cy:120,ledgers:[]},
+  "FA" :{cy:110,ledgers:[]},
+  "SOL":{cy:100,ledgers:[]},
+  "LA" :{cy: 90,ledgers:[]},
+  "SI" :{cy: 80,ledgers:[]},
+  "DO'":{cy: 70,ledgers:[]},
+  "RE'":{cy: 60,ledgers:[]},
+  "MI'":{cy: 50,ledgers:[]},
+  "FA'":{cy: 40,ledgers:[]},
+  "SOL'":{cy:30,ledgers:[]},
+  "LA'":{cy: 20,ledgers:[10]},
+  "SI'":{cy: 10,ledgers:[10]},
 };
+const ALL_NOTES = Object.keys(NOTE_SVG); // 14 notas
 
-const NOTE_CX = 190; // posición horizontal de la nota en el SVG
-
-function placeNote(name) {
-  const cfg = NOTE_SVG[name];
-  if (!cfg) return;
-  const { cy } = cfg;
-  const cx     = NOTE_CX;
-  const rx = 13, ry = 9.5;
-
+const NOTE_CX = 190;
+function placeNote(name, color="#ffd166") {
+  const cfg = NOTE_SVG[name]; if (!cfg) return;
+  const {cy} = cfg; const cx=NOTE_CX; const rx=13,ry=9.5;
   const head = document.getElementById("svg-note-head");
-  head.setAttribute("cx", cx);
-  head.setAttribute("cy", cy);
-  head.setAttribute("rx", rx);
-  head.setAttribute("ry", ry);
-  head.setAttribute("transform", `rotate(-15 ${cx} ${cy})`);
+  head.setAttribute("cx",cx); head.setAttribute("cy",cy);
+  head.setAttribute("rx",rx); head.setAttribute("ry",ry);
+  head.setAttribute("transform",`rotate(-15 ${cx} ${cy})`);
+  head.setAttribute("fill",color);
   head.setAttribute("display","block");
-  // animación
-  head.style.animation = "none";
-  void head.getBoundingClientRect();
-  head.style.animation = "noteIn .22s ease forwards";
+  head.style.animation="none"; void head.getBoundingClientRect();
+  head.style.animation="noteIn .2s ease forwards";
 
-  // Ledger lines
-  const lo1 = document.getElementById("svg-ledger-lo1");
-  const lo2 = document.getElementById("svg-ledger-lo2");
-  const hi1 = document.getElementById("svg-ledger-hi1");
-  const hi2 = document.getElementById("svg-ledger-hi2");
-  [lo1,lo2,hi1,hi2].forEach(l => l.setAttribute("display","none"));
-
-  const lx1 = cx - rx - 7, lx2 = cx + rx + 7;
-  cfg.ledgers.forEach((ly, i) => {
-    const el = ly >= 120 ? (i===0?lo1:lo2) : (i===0?hi1:hi2);
-    el.setAttribute("x1",lx1); el.setAttribute("x2",lx2);
-    el.setAttribute("y1",ly);  el.setAttribute("y2",ly);
+  const ids=["svg-ledger-lo1","svg-ledger-lo2","svg-ledger-hi1","svg-ledger-hi2"];
+  ids.forEach(id=>document.getElementById(id).setAttribute("display","none"));
+  const lx1=cx-rx-8, lx2=cx+rx+8;
+  cfg.ledgers.forEach((ly,i)=>{
+    const el=document.getElementById(ly>=120?(i===0?"svg-ledger-lo1":"svg-ledger-lo2"):(i===0?"svg-ledger-hi1":"svg-ledger-hi2"));
+    el.setAttribute("x1",lx1);el.setAttribute("x2",lx2);
+    el.setAttribute("y1",ly);el.setAttribute("y2",ly);
     el.setAttribute("display","block");
   });
 }
-
-function clearStaff() {
+function clearStaff(){
   document.getElementById("svg-note-head").setAttribute("display","none");
   ["svg-ledger-lo1","svg-ledger-lo2","svg-ledger-hi1","svg-ledger-hi2"]
-    .forEach(id => document.getElementById(id).setAttribute("display","none"));
-  setPhaseText("");
+    .forEach(id=>document.getElementById(id).setAttribute("display","none"));
 }
 
-function setPhaseText(txt) {
-  const el = document.getElementById("svg-phase-text");
-  el.textContent = txt;
-  el.setAttribute("display", txt ? "block" : "none");
+// ── NIVEL → LONGITUD Y POOL ──────────────────────────────────
+// Nivel N = secuencia de N notas
+// El pool de notas se expande conforme sube el nivel
+// Dificultad afecta: qué tan rápido aparecen notas agudas + tempo
+
+// Pool por nivel (acumula notas): empieza con DO,MI,SOL y va añadiendo
+const NOTE_PROGRESSION = [
+  // Nivel 1-3: notas básicas cómodas
+  "SOL","MI","DO",
+  // Nivel 4-6: añade más notas del pentagrama
+  "LA","RE","FA",
+  // Nivel 7-9: pentagrama completo
+  "SI","RE'","DO'",
+  // Nivel 10-12: notas agudas
+  "MI'","FA'","SOL'",
+  // Nivel 13-14: notas muy agudas
+  "LA'","SI'",
+];
+
+function getPoolForLevel(level, diff) {
+  // Fácil: añade 1 nota cada 2 niveles (más lento)
+  // Normal: añade 1 nota por nivel
+  // Difícil: empieza con más notas (saltamos al inicio)
+  const diffOffset = {facil:0, normal:0, dificil:3}[diff]||0;
+  const step       = {facil:2, normal:1, dificil:1}[diff]||1;
+  const idx        = diffOffset + Math.floor((level-1)/step);
+  const count      = Math.min(idx+3, NOTE_PROGRESSION.length); // mínimo 3 notas
+  return NOTE_PROGRESSION.slice(0, count);
 }
 
-// ── ALL NOTES LIST ───────────────────────────────────────────
-const ALL_NOTES = Object.keys(NOTE_SVG); // 14 notas en orden
+// Número de notas en la secuencia = nivel (1→1, 2→2, …)
+// Para entrenamiento usamos secuencias de 3 notas fijas
+// Para superviviente crece igual pero sin pausa de nivel
 
-// ── LEVEL POOLS (notas disponibles por nivel y dificultad) ──
-// Mínimo 3 notas para que no sea trivial
-const LEVEL_POOLS = {
-  facil: [
-    ["MI","FA","SOL"],
-    ["MI","FA","SOL","LA"],
-    ["RE","MI","FA","SOL","LA"],
-    ["RE","MI","FA","SOL","LA","SI"],
-    ["DO","RE","MI","FA","SOL","LA","SI"],
-  ],
-  normal: [
-    ["DO","MI","SOL","SI"],
-    ["DO","RE","MI","FA","SOL"],
-    ["DO","RE","MI","FA","SOL","LA","SI"],
-    ["DO","RE","MI","SOL","LA","SI","DO'","RE'"],
-    ["DO","MI","SOL","SI","DO'","RE'","MI'","FA'"],
-    ["DO","RE","MI","FA","SOL","LA","SI","DO'","RE'","MI'"],
-    ALL_NOTES,
-  ],
-  dificil: [
-    ["DO","SOL","DO'","SOL'"],
-    ["DO","MI","SOL","SI","DO'","MI'"],
-    ["DO","RE","MI","SOL","LA","SI","DO'","RE'","MI'"],
-    ["DO","FA","SOL","SI","DO'","FA'","SOL'","LA'"],
-    ["DO","RE","MI","FA","SOL","LA","SI","DO'","RE'","MI'","FA'","SOL'","LA'","SI'"],
-    ALL_NOTES,
-    ALL_NOTES,
-  ],
-};
-
-// Longitud de la secuencia según nivel y dificultad
-function seqLength(level, diff) {
-  const base = { facil:2, normal:3, dificil:4 }[diff] || 3;
-  return base + (level - 1);
-}
-
-// Tempo de reproducción (ms entre notas) según dificultad
+// Tempo entre notas (ms)
 function tempo(diff) {
-  return { facil:900, normal:700, dificil:500 }[diff] || 700;
+  return {facil:950, normal:750, dificil:550}[diff]||750;
 }
 
 // ── STATE ────────────────────────────────────────────────────
 let currentUser  = null;
 let selectedMode = "clasico";
 let selectedDiff = "normal";
-let trainNotes   = ["DO","MI","SOL","LA","SI","DO'","RE'"];
-let gs = {}; // gameState
+let gs = {};
 
 // ── PARTICLES ────────────────────────────────────────────────
 (function(){
-  const c = document.getElementById("particles"), ctx = c.getContext("2d");
-  const dots = [];
-  const resize = () => { c.width = innerWidth; c.height = innerHeight; };
-  const spawn  = () => ({ x:Math.random()*c.width, y:Math.random()*c.height,
-    r:Math.random()*1.3+.3, vx:(Math.random()-.5)*.22, vy:-Math.random()*.3-.08,
-    a:Math.random()*.4+.1 });
-  resize(); addEventListener("resize", resize);
-  for(let i=0;i<50;i++) dots.push(spawn());
+  const c=document.getElementById("particles"),ctx=c.getContext("2d");const dots=[];
+  const resize=()=>{c.width=innerWidth;c.height=innerHeight};
+  const spawn=()=>({x:Math.random()*c.width,y:Math.random()*c.height,
+    r:Math.random()*1.3+.3,vx:(Math.random()-.5)*.2,vy:-Math.random()*.28-.07,a:Math.random()*.4+.1});
+  resize();addEventListener("resize",resize);
+  for(let i=0;i<50;i++)dots.push(spawn());
   (function tick(){
     ctx.clearRect(0,0,c.width,c.height);
-    dots.forEach((d,i)=>{
-      d.x+=d.vx; d.y+=d.vy;
+    dots.forEach((d,i)=>{d.x+=d.vx;d.y+=d.vy;
       if(d.y<-4||d.x<-4||d.x>c.width+4){dots[i]=spawn();dots[i].y=c.height+4}
       ctx.beginPath();ctx.arc(d.x,d.y,d.r,0,Math.PI*2);
       ctx.fillStyle=`rgba(240,180,41,${d.a})`;ctx.fill();
-    });
-    requestAnimationFrame(tick);
+    });requestAnimationFrame(tick);
   })();
 })();
 
@@ -244,149 +208,133 @@ function showScreen(id){
   document.getElementById("screen-"+id).classList.add("active");
 }
 
-// ── AUTH ─────────────────────────────────────────────────────
-window.switchTab = t => {
-  document.getElementById("form-login").classList.toggle("hidden",    t!=="login");
-  document.getElementById("form-register").classList.toggle("hidden", t!=="register");
-  document.getElementById("tab-login").classList.toggle("active",    t==="login");
-  document.getElementById("tab-register").classList.toggle("active", t==="register");
-};
+// ── SPLASH INICIO ────────────────────────────────────────────
+function initSplash(){
+  // Lluvia de notas musicales
+  const rain=document.getElementById("splash-rain");
+  const symbols=["♩","♪","♫","♬","𝄞","𝄢","♭","♯"];
+  for(let i=0;i<18;i++){
+    const el=document.createElement("div");
+    el.className="rain-note";
+    el.textContent=symbols[Math.floor(Math.random()*symbols.length)];
+    el.style.left=Math.random()*100+"vw";
+    el.style.animationDuration=(4+Math.random()*5)+"s";
+    el.style.animationDelay=(-Math.random()*6)+"s";
+    el.style.fontSize=(1.2+Math.random()*2)+"rem";
+    el.style.color=`hsl(${40+Math.random()*20},80%,${50+Math.random()*20}%)`;
+    rain.appendChild(el);
+  }
+  // Click/tap para continuar
+  document.getElementById("screen-splash").addEventListener("click",()=>{
+    playSFX("splash");
+    document.getElementById("screen-splash").style.transition="opacity .6s";
+    document.getElementById("screen-splash").style.opacity="0";
+    setTimeout(()=>{
+      document.getElementById("screen-splash").classList.remove("active");
+      // Verificar sesión guardada
+      const saved=localStorage.getItem("memorix_user");
+      if(saved){try{currentUser=JSON.parse(saved);loadMenu();}catch{showScreen("auth")}}
+      else showScreen("auth");
+    },600);
+  },{once:true});
+}
 
-window.handleRegister = async function(){
+// ── AUTH ─────────────────────────────────────────────────────
+window.switchTab=t=>{
+  document.getElementById("form-login").classList.toggle("hidden",t!=="login");
+  document.getElementById("form-register").classList.toggle("hidden",t!=="register");
+  document.getElementById("tab-login").classList.toggle("active",t==="login");
+  document.getElementById("tab-register").classList.toggle("active",t==="register");
+};
+window.handleRegister=async function(){
   const u=document.getElementById("reg-user").value.trim();
   const p=document.getElementById("reg-pass").value.trim();
-  const m=document.getElementById("reg-msg");
-  m.className="auth-msg";
+  const m=document.getElementById("reg-msg"); m.className="auth-msg";
   if(!u||!p){m.textContent="Completa todos los campos.";m.className="auth-msg error";return}
   if(u.length<3){m.textContent="Mínimo 3 caracteres.";m.className="auth-msg error";return}
   if(p.length<4){m.textContent="Contraseña mínimo 4 caracteres.";m.className="auth-msg error";return}
   m.textContent="Registrando...";
-  try{
-    const d=await registrarUsuario(u,p); currentUser=d;
+  try{const d=await registrarUsuario(u,p);currentUser=d;
     localStorage.setItem("memorix_user",JSON.stringify(d));
-    m.textContent="¡Registro exitoso!";m.className="auth-msg success";
-    setTimeout(loadMenu,600);
+    m.textContent="¡Registro exitoso!";m.className="auth-msg success";setTimeout(loadMenu,600);
   }catch(e){m.textContent=e.message;m.className="auth-msg error"}
 };
-
-window.handleLogin = async function(){
+window.handleLogin=async function(){
   const u=document.getElementById("login-user").value.trim();
   const p=document.getElementById("login-pass").value.trim();
-  const m=document.getElementById("login-msg");
-  m.className="auth-msg";
+  const m=document.getElementById("login-msg"); m.className="auth-msg";
   if(!u||!p){m.textContent="Completa todos los campos.";m.className="auth-msg error";return}
   m.textContent="Ingresando...";
-  try{
-    const d=await loginUsuario(u,p); currentUser=d;
-    localStorage.setItem("memorix_user",JSON.stringify(d));
-    loadMenu();
+  try{const d=await loginUsuario(u,p);currentUser=d;
+    localStorage.setItem("memorix_user",JSON.stringify(d));loadMenu();
   }catch(e){m.textContent=e.message;m.className="auth-msg error"}
 };
-
 window.logout=()=>{currentUser=null;localStorage.removeItem("memorix_user");showScreen("auth")};
-
-function loadMenu(){
-  document.getElementById("menu-username").textContent=currentUser.usuario;
-  showScreen("menu");
-}
+function loadMenu(){document.getElementById("menu-username").textContent=currentUser.usuario;showScreen("menu")}
 window.showMenu=loadMenu;
 
 // ── MODE SELECT ───────────────────────────────────────────────
-window.showModeSelect = function(){
-  buildTrainPicker();
+window.showModeSelect=function(){
   updateDiffDesc();
   document.querySelectorAll(".mode-card").forEach(c=>c.classList.toggle("selected",c.dataset.mode===selectedMode));
   document.querySelectorAll(".diff-btn").forEach(b=>b.classList.toggle("active",b.dataset.diff===selectedDiff));
-  updateModeUI();
   showScreen("modeselect");
 };
-
-window.selectMode = function(mode){
+window.selectMode=function(mode){
   selectedMode=mode;
   document.querySelectorAll(".mode-card").forEach(c=>c.classList.toggle("selected",c.dataset.mode===mode));
-  updateModeUI();
 };
-
-function updateModeUI(){
-  const isTrain=selectedMode==="entrenamiento";
-  document.getElementById("diff-section").classList.toggle("hidden",isTrain);
-  document.getElementById("train-section").classList.toggle("hidden",!isTrain);
-}
-
 window.selectDiff=function(diff){
   selectedDiff=diff;
   document.querySelectorAll(".diff-btn").forEach(b=>b.classList.toggle("active",b.dataset.diff===diff));
   updateDiffDesc();
 };
-
 function updateDiffDesc(){
   const d={
-    facil:  "Secuencias cortas (2-4 notas). Notas del pentagrama principal.",
-    normal: "Secuencias medias (3-7 notas). Notas graves y agudas.",
-    dificil:"Secuencias largas (4-11 notas). Todas las notas. Ritmo rápido.",
+    facil:  "Tempo lento. Las notas agudas aparecen más tarde.",
+    normal: "Equilibrado. Tempo y progresión estándar.",
+    dificil:"Tempo rápido. Notas agudas desde el inicio.",
   };
   document.getElementById("diff-desc").textContent=d[selectedDiff]||"";
 }
 
-function buildTrainPicker(){
-  const wrap=document.getElementById("train-note-picker");
-  wrap.innerHTML="";
-  ALL_NOTES.forEach(n=>{
-    const btn=document.createElement("button");
-    btn.className="train-toggle"+(trainNotes.includes(n)?" on":"");
-    btn.textContent=n;
-    btn.onclick=()=>{
-      if(trainNotes.includes(n)){
-        if(trainNotes.length<=3)return;
-        trainNotes=trainNotes.filter(x=>x!==n);btn.classList.remove("on");
-      } else {trainNotes.push(n);btn.classList.add("on")}
-    };
-    wrap.appendChild(btn);
-  });
-}
-
 // ── LAUNCH GAME ───────────────────────────────────────────────
-window.launchGame = function(){
-  const modeLabels={clasico:"CLÁSICO",entrenamiento:"ENTRENAMIENTO",contrareloj:"CONTRARRELOJ",superviviente:"SUPERVIVIENTE"};
-  const diffLabels={facil:"FÁCIL",normal:"NORMAL",dificil:"DIFÍCIL"};
-
-  document.getElementById("mode-badge").textContent=modeLabels[selectedMode]||selectedMode.toUpperCase();
-  document.getElementById("diff-badge").textContent=diffLabels[selectedDiff]||selectedDiff.toUpperCase();
-
+window.launchGame=function(){
+  const mL={clasico:"CLÁSICO",entrenamiento:"ENTRENAMIENTO",contrareloj:"CONTRARRELOJ",superviviente:"SUPERVIVIENTE"};
+  const dL={facil:"FÁCIL",normal:"NORMAL",dificil:"DIFÍCIL"};
+  document.getElementById("mode-badge").textContent=mL[selectedMode]||selectedMode.toUpperCase();
+  document.getElementById("diff-badge").textContent=dL[selectedDiff]||selectedDiff.toUpperCase();
   const isCR=selectedMode==="contrareloj";
   document.getElementById("hud-timer-wrap").style.display=isCR?"flex":"none";
   document.getElementById("hud-lives-wrap").style.display=selectedMode==="entrenamiento"?"none":"flex";
 
   gs={
-    mode:     selectedMode,
-    diff:     selectedDiff,
-    score:    0,
-    level:    1,
-    lives:    selectedMode==="superviviente"?1:3,
-    sequence: [],       // secuencia actual a memorizar
-    inputIdx: 0,        // posición del usuario en la secuencia
-    phase:    "show",   // "show" | "input"
-    waiting:  false,
-    timerSec: 60,
-    timerInterval: null,
-    seqDone:  0,        // secuencias completadas
-    totalCorrect:0,
-    totalWrong:0,
+    mode:selectedMode, diff:selectedDiff,
+    score:0, level:1,
+    lives:selectedMode==="superviviente"?1:3,
+    sequence:[], inputIdx:0,
+    phase:"show",  // "show"|"input"|"over"
+    waiting:false,
+    timerSec:60, timerInterval:null,
+    seqDone:0,
+    totalCorrect:0, totalWrong:0,
+    replayCount:0,  // límite de replays por ronda
   };
 
   clearStaff();
   buildAnswerButtons();
   updateHUD();
+  setReplayBtn(false);
   showScreen("game");
   if(isCR) startTimer();
-  setTimeout(startNewSequence, 400);
+  setTimeout(startNewSequence,500);
 };
 
 // ── TIMER ─────────────────────────────────────────────────────
 function startTimer(){
   gs.timerSec=60; updateTimerUI();
   gs.timerInterval=setInterval(()=>{
-    gs.timerSec--; updateTimerUI();
+    gs.timerSec--;updateTimerUI();
     if(gs.timerSec<=0){clearInterval(gs.timerInterval);endGame("timeout")}
   },1000);
 }
@@ -403,264 +351,292 @@ function updateHUD(){
   const h=["💔","❤️","❤️❤️","❤️❤️❤️"][Math.min(gs.lives,3)];
   document.getElementById("hud-lives").textContent=h||"💔";
 }
-
-function setStatus(txt, cls=""){
+function setStatus(txt,cls=""){
   const el=document.getElementById("seq-status");
-  el.textContent=txt;
-  el.className="seq-status"+(cls?" "+cls:"");
+  el.textContent=txt;el.className="seq-status"+(cls?" "+cls:"");
 }
 
 // ── SEQ DOTS ─────────────────────────────────────────────────
-function renderDots(seq, inputIdx, phase){
-  const wrap=document.getElementById("seq-dots");
-  wrap.innerHTML="";
+function renderDots(seq,inputIdx,phase){
+  const wrap=document.getElementById("seq-dots");wrap.innerHTML="";
   seq.forEach((_,i)=>{
-    const d=document.createElement("div");
-    d.className="seq-dot";
-    if(phase==="show"){
-      d.classList.add("active"); // todas grises durante show
-    } else {
-      // fase input
-      if(i<inputIdx) d.classList.add("correct");        // ya respondidas
-      else if(i===inputIdx) d.classList.add("active");  // actual
-      else d.classList.add("pending");                  // pendientes
+    const d=document.createElement("div");d.className="seq-dot";
+    if(phase==="show"){d.classList.add("show-idle")}
+    else{
+      if(i<inputIdx) d.classList.add("correct");
+      else if(i===inputIdx) d.classList.add("current");
+      else d.classList.add("pending");
     }
     wrap.appendChild(d);
   });
 }
-
-function markDot(idx, state){
+function highlightDotShow(idx){
+  document.querySelectorAll(".seq-dot").forEach((d,i)=>{
+    d.className="seq-dot "+(i===idx?"show-active":"show-idle");
+  });
+}
+function markDot(idx,state){
   const dots=document.querySelectorAll(".seq-dot");
   if(dots[idx]) dots[idx].className="seq-dot "+state;
+  if(state==="correct"&&dots[idx+1]) dots[idx+1].className="seq-dot current";
 }
 
 // ── NUEVA SECUENCIA ───────────────────────────────────────────
 function getPool(){
-  if(gs.mode==="entrenamiento") return trainNotes;
   if(gs.mode==="superviviente") return ALL_NOTES;
-  const pools=LEVEL_POOLS[gs.diff]||LEVEL_POOLS.normal;
-  return pools[Math.min(gs.level-1, pools.length-1)];
+  if(gs.mode==="entrenamiento") return ALL_NOTES.slice(0,7); // 7 notas normales
+  return getPoolForLevel(gs.level, gs.diff);
+}
+
+function seqLen(){
+  if(gs.mode==="entrenamiento") return 3; // fijo para entrenamiento
+  if(gs.mode==="superviviente") return gs.level; // crece igual
+  return gs.level; // nivel = longitud
 }
 
 function generateSequence(){
   const pool=getPool();
-  const len=gs.mode==="entrenamiento" ? 3+Math.floor(Math.random()*3)
-           : gs.mode==="superviviente"? 3+gs.seqDone
-           : seqLength(gs.level, gs.diff);
+  const len=seqLen();
   const seq=[];
   for(let i=0;i<len;i++){
     let note;
-    do{ note=pool[Math.floor(Math.random()*pool.length)]; }
-    while(seq.length>0 && note===seq[seq.length-1]); // evitar dos iguales seguidas
+    do{note=pool[Math.floor(Math.random()*pool.length)]}
+    while(seq.length>0&&note===seq[seq.length-1]);
     seq.push(note);
   }
   return seq;
 }
 
-async function startNewSequence(){
-  gs.sequence=generateSequence();
-  gs.inputIdx=0;
-  gs.phase="show";
-  setStatus("🎵 Memoriza la secuencia…");
-  renderDots(gs.sequence, 0, "show");
-  lockButtons(true);
-  clearStaff();
-
-  // Reproducir la secuencia nota a nota
+// Reproduce la secuencia en el pentagrama
+async function playSequence(seq){
   const t=tempo(gs.diff);
-  for(let i=0;i<gs.sequence.length;i++){
-    await delay(i===0 ? 300 : t);
-    const note=gs.sequence[i];
-    placeNote(note);
-    playNote(note, t/1000*0.85);
-    // Highlight dot actual
-    const dots=document.querySelectorAll(".seq-dot");
-    dots.forEach(d=>d.classList.remove("active"));
-    if(dots[i]) dots[i].classList.add("active");
-    await delay(t * 0.75);
+  clearStaff();
+  for(let i=0;i<seq.length;i++){
+    await delay(i===0?300:t);
+    if(gs.phase==="over") return; // salida de emergencia
+    placeNote(seq[i]);
+    playNote(seq[i], t/1000*0.82);
+    highlightDotShow(i);
+    await delay(t*0.78);
     clearStaff();
   }
-
-  await delay(300);
-  // Fase de input
-  gs.phase="input";
-  gs.inputIdx=0;
-  renderDots(gs.sequence, 0, "input");
-  setStatus("▶ Tu turno — toca la secuencia", "input-phase");
-  lockButtons(false);
+  await delay(280);
 }
 
-function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
+async function startNewSequence(){
+  if(gs.phase==="over") return;
+  gs.sequence=generateSequence();
+  gs.inputIdx=0;
+  gs.replayCount=0;
+  gs.phase="show";
+  setStatus("🎵 Memoriza…");
+  renderDots(gs.sequence,0,"show");
+  lockButtons(true);
+  setReplayBtn(false);
+  clearStaff();
+  await playSequence(gs.sequence);
+  if(gs.phase==="over") return;
+  // Fase input
+  gs.phase="input";
+  gs.inputIdx=0;
+  renderDots(gs.sequence,0,"input");
+  setStatus("▶ ¡Tu turno!","input-phase");
+  lockButtons(false);
+  setReplayBtn(true);
+}
 
-// ── BUTTONS ──────────────────────────────────────────────────
+function delay(ms){return new Promise(r=>setTimeout(r,ms))}
+
+// ── REPLAY ───────────────────────────────────────────────────
+const MAX_REPLAYS = 2; // máximo 2 repeticiones por ronda
+
+window.replaySequence = async function(){
+  if(gs.phase!=="input"||gs.waiting||gs.replayCount>=MAX_REPLAYS) return;
+  gs.replayCount++;
+  gs.phase="show";
+  lockButtons(true);
+  setReplayBtn(false,"playing");
+  setStatus("🔁 Repitiendo…");
+  renderDots(gs.sequence,0,"show");
+  clearStaff();
+  await playSequence(gs.sequence);
+  if(gs.phase==="over") return;
+  gs.phase="input";
+  renderDots(gs.sequence,gs.inputIdx,"input");
+  setStatus("▶ ¡Tu turno!","input-phase");
+  lockButtons(false);
+  // Si quedan replays disponibles, mostrar botón; si no, desactivar
+  setReplayBtn(gs.replayCount<MAX_REPLAYS);
+};
+
+function setReplayBtn(enabled, cls=""){
+  const btn=document.getElementById("btn-replay");
+  btn.disabled=!enabled;
+  btn.className="btn-replay"+(cls?" "+cls:"");
+  const left=MAX_REPLAYS-gs.replayCount;
+  btn.textContent=`🔁 Repetir${enabled?" ("+left+")":""}`;
+}
+
+// ── ANSWER BUTTONS ────────────────────────────────────────────
 function buildAnswerButtons(){
-  const area=document.getElementById("answer-buttons");
-  area.innerHTML="";
+  const area=document.getElementById("answer-buttons");area.innerHTML="";
   ALL_NOTES.forEach(note=>{
     const btn=document.createElement("button");
-    btn.className="note-btn";
-    btn.dataset.note=note;
+    btn.className="note-btn";btn.dataset.note=note;
     if(note.includes("'")){
       const base=note.replace("'","");
       btn.innerHTML=`${base}<span class="oct">▲</span>`;
-    } else {
-      btn.textContent=note;
-    }
+    }else{btn.textContent=note}
     btn.addEventListener("click",()=>handleNotePress(note,btn));
     area.appendChild(btn);
   });
 }
-
 function lockButtons(locked){
-  document.querySelectorAll(".note-btn").forEach(b=>{
-    b.classList.toggle("locked",locked);
-  });
+  document.querySelectorAll(".note-btn").forEach(b=>b.classList.toggle("locked",locked));
 }
 
 // ── HANDLE INPUT ─────────────────────────────────────────────
-async function handleNotePress(note, btn){
+async function handleNotePress(note,btn){
   if(gs.phase!=="input"||gs.waiting) return;
   gs.waiting=true;
   lockButtons(true);
+  setReplayBtn(false);
 
   const expected=gs.sequence[gs.inputIdx];
   const correct=note===expected;
-
-  // Sonido de la nota tocada siempre
-  playNote(note, 0.5);
-  placeNote(note); // mostrar en pentagrama
+  playNote(note,.5);
+  placeNote(note, correct?"#ffd166":"#ff3860");
   btn.classList.add("pressed");
-
-  await delay(120);
-  btn.classList.remove("pressed");
+  await delay(100); btn.classList.remove("pressed");
 
   if(correct){
     btn.classList.add("correct-flash");
     markDot(gs.inputIdx,"correct");
-    gs.totalCorrect++;
-    gs.inputIdx++;
+    gs.totalCorrect++;gs.inputIdx++;
 
-    // ¿Secuencia completa?
-    if(gs.inputIdx >= gs.sequence.length){
-      // ÉXITO
-      await delay(250);
-      btn.classList.remove("correct-flash");
-      clearStaff();
-      gs.seqDone++;
-      const pts=calcPoints();
-      gs.score+=pts;
+    if(gs.inputIdx>=gs.sequence.length){
+      // ── SECUENCIA COMPLETA ──
+      await delay(220); btn.classList.remove("correct-flash");
+      clearStaff();gs.seqDone++;
+      const pts=calcPoints();gs.score+=pts;
       playSFX("correct");
-      setStatus("✓ ¡Correcto!", "correct-phase");
+      setStatus("✓ ¡Correcto!","correct-phase");
       flashFeedback("correct");
       showScorePopup("+"+pts);
       updateHUD();
-
-      await delay(600);
+      await delay(500);
       btn.classList.remove("correct-flash");
+      gs.waiting=false;
 
-      // Subir de nivel (modo clásico: cada 3 secuencias)
-      if(gs.mode==="clasico" && gs.seqDone % 3 === 0 && gs.level < 7){
+      if(gs.mode==="entrenamiento"){
+        // Entrenamiento: repite sin subir nivel
+        await startNewSequence();
+      } else {
+        // Subir de nivel
+        await showLevelUpSplash(gs.level, gs.level+1, pts);
         gs.level++;
-        playSFX("levelup");
-        setStatus("⬆ ¡Nivel "+gs.level+"!", "correct-phase");
         updateHUD();
-        await delay(800);
+        await startNewSequence();
       }
-
-      gs.waiting=false;
-      await startNewSequence();
     } else {
-      // Siguiente nota de la secuencia
-      await delay(180);
-      btn.classList.remove("correct-flash");
-      clearStaff();
-      renderDots(gs.sequence, gs.inputIdx, "input");
-      gs.waiting=false;
-      lockButtons(false);
+      // Siguiente nota
+      await delay(160);btn.classList.remove("correct-flash");clearStaff();
+      renderDots(gs.sequence,gs.inputIdx,"input");
+      gs.waiting=false;lockButtons(false);
+      setReplayBtn(gs.replayCount<MAX_REPLAYS);
     }
 
   } else {
-    // ERROR
+    // ── ERROR ──
     btn.classList.add("wrong-flash");
     markDot(gs.inputIdx,"wrong");
     gs.totalWrong++;
-    playSFX("wrong");
-    flashFeedback("wrong");
-    setStatus("✗ Error — era: "+expected, "wrong-phase");
-
-    // Mostrar la nota correcta en pentagrama brevemente
-    await delay(150);
-    clearStaff();
-    placeNote(expected);
-    playNote(expected, 0.8);
-    await delay(600);
-
-    btn.classList.remove("wrong-flash");
-    clearStaff();
-
+    playSFX("wrong");flashFeedback("wrong");
+    setStatus("✗ Era: "+expected,"wrong-phase");
+    // Mostrar la nota correcta
+    await delay(150);clearStaff();placeNote(expected,"#23d160");playNote(expected,.8);
+    await delay(700);
+    btn.classList.remove("wrong-flash");clearStaff();
     if(gs.mode!=="entrenamiento") gs.lives--;
     updateHUD();
-
-    if(gs.mode!=="entrenamiento" && gs.lives<=0){
-      await delay(200);
-      endGame("lives");
-      return;
-    }
-
+    if(gs.mode!=="entrenamiento"&&gs.lives<=0){await delay(200);endGame("lives");return}
     gs.waiting=false;
-    // Volver a mostrar la misma secuencia
     await delay(300);
+    // Repite la misma secuencia (sin subir nivel)
     await startNewSequence();
   }
 }
 
 function calcPoints(){
-  const { mode, diff, sequence } = gs;
-  if(mode==="entrenamiento") return 0;
-  const diffMult={ facil:.7, normal:1, dificil:1.5 }[diff]||1;
-  const base = mode==="superviviente" ? 15 : 10;
-  return Math.round(base * sequence.length * diffMult);
+  if(gs.mode==="entrenamiento") return 0;
+  const diffMult={facil:.8,normal:1,dificil:1.5}[gs.diff]||1;
+  const base=gs.mode==="superviviente"?15:10;
+  return Math.round(base*gs.sequence.length*diffMult);
 }
 
 function showScorePopup(txt){
   const pop=document.createElement("div");
   pop.textContent=txt;
-  pop.style.cssText="position:fixed;top:45%;left:50%;transform:translateX(-50%);"+
-    "font-family:'Orbitron',monospace;font-size:1.6rem;color:#ffd166;font-weight:900;"+
-    "pointer-events:none;z-index:200;text-shadow:0 0 12px rgba(240,180,41,.9);"+
-    "animation:scoreFloat .9s ease forwards";
-  document.body.appendChild(pop);
-  setTimeout(()=>pop.remove(),950);
+  pop.style.cssText="position:fixed;top:42%;left:50%;transform:translateX(-50%);"+
+    "font-family:'Orbitron',monospace;font-size:1.8rem;color:#ffd166;font-weight:900;"+
+    "pointer-events:none;z-index:200;text-shadow:0 0 14px rgba(240,180,41,.9);"+
+    "animation:scoreFloat 1s ease forwards";
+  document.body.appendChild(pop);setTimeout(()=>pop.remove(),1050);
 }
 
 function flashFeedback(type){
   const el=document.getElementById("feedback-flash");
   el.className="feedback-flash "+type;
-  setTimeout(()=>el.className="feedback-flash",460);
+  setTimeout(()=>el.className="feedback-flash",450);
+}
+
+// ── SPLASH DE NIVEL ───────────────────────────────────────────
+function showLevelUpSplash(completedLevel, nextLevel, ptsGained){
+  return new Promise(resolve=>{
+    playSFX("levelup");
+
+    const nextLen=nextLevel; // el siguiente nivel tiene nextLevel notas
+    document.getElementById("lu-num").textContent="NIVEL "+nextLevel;
+    document.getElementById("lu-info").textContent=
+      "Ahora la secuencia tiene "+nextLen+" nota"+(nextLen===1?"":"s");
+    document.getElementById("lu-score").textContent="+"+ptsGained+" pts";
+
+    // Resetear animación
+    const inner=document.querySelector(".levelup-inner");
+    inner.style.animation="none";void inner.getBoundingClientRect();
+    inner.style.animation="levelupIn .5s cubic-bezier(.34,1.56,.64,1) forwards";
+
+    showScreen("levelup");
+    // Click para continuar (o auto después de 2.5s)
+    const proceed=()=>{
+      showScreen("game");
+      resolve();
+    };
+    const autoTimer=setTimeout(proceed,2500);
+    document.getElementById("screen-levelup").addEventListener("click",()=>{
+      clearTimeout(autoTimer);proceed();
+    },{once:true});
+  });
 }
 
 // ── GAME OVER ─────────────────────────────────────────────────
 async function endGame(reason){
   if(gs.timerInterval) clearInterval(gs.timerInterval);
   gs.phase="over";
-
-  const modeLabel={clasico:"CLÁSICO",entrenamiento:"ENTRENAMIENTO",contrareloj:"CONTRARRELOJ",superviviente:"SUPERVIVIENTE"};
+  const mL={clasico:"CLÁSICO",entrenamiento:"ENTRENAMIENTO",contrareloj:"CONTRARRELOJ",superviviente:"SUPERVIVIENTE"};
   const isTimeout=reason==="timeout";
-  const accuracy=gs.totalCorrect+gs.totalWrong>0
-    ?Math.round(gs.totalCorrect/(gs.totalCorrect+gs.totalWrong)*100):0;
-
+  const total=gs.totalCorrect+gs.totalWrong;
+  const accuracy=total>0?Math.round(gs.totalCorrect/total*100):0;
   document.getElementById("go-icon").textContent=isTimeout?"⏱️":"💀";
   document.getElementById("go-title").textContent=isTimeout?"¡TIEMPO!":"GAME OVER";
   document.getElementById("go-title").className=isTimeout?"gameover-title win":"gameover-title";
-  document.getElementById("go-mode").textContent=`${modeLabel[gs.mode]} · ${(gs.diff||"").toUpperCase()}`;
+  document.getElementById("go-mode").textContent=`${mL[gs.mode]} · ${(gs.diff||"").toUpperCase()}`;
   document.getElementById("final-score").textContent=gs.score;
   document.getElementById("go-detail").textContent=
     `Precisión ${accuracy}% · Nivel ${gs.level} · ${gs.seqDone} secuencias`;
   showScreen("gameover");
-
   if(gs.mode!=="entrenamiento"){
-    try{
-      await guardarPuntaje(currentUser.usuario, gs.score, gs.mode);
+    try{await guardarPuntaje(currentUser.usuario,gs.score,gs.mode);
       currentUser.mejorPuntaje=Math.max(currentUser.mejorPuntaje||0,gs.score);
       localStorage.setItem("memorix_user",JSON.stringify(currentUser));
     }catch(e){/*offline*/}
@@ -669,9 +645,8 @@ async function endGame(reason){
 
 window.confirmExit=function(){
   if(confirm("¿Salir? Se perderá el progreso.")){
-    if(gs.timerInterval) clearInterval(gs.timerInterval);
-    gs.phase="over";
-    loadMenu();
+    if(gs.timerInterval)clearInterval(gs.timerInterval);
+    gs.phase="over";loadMenu();
   }
 };
 
@@ -680,10 +655,9 @@ window.showRanking=async function(){
   showScreen("ranking");
   loadRankingTab("clasico",document.querySelector(".rank-tab"));
 };
-
 window.loadRankingTab=async function(mode,tabEl){
   document.querySelectorAll(".rank-tab").forEach(t=>t.classList.remove("active"));
-  if(tabEl) tabEl.classList.add("active");
+  if(tabEl)tabEl.classList.add("active");
   const list=document.getElementById("ranking-list");
   list.innerHTML='<div class="loading">Cargando...</div>';
   try{
@@ -699,24 +673,20 @@ window.loadRankingTab=async function(mode,tabEl){
   }catch(e){list.innerHTML='<div class="loading">Error al cargar.</div>'}
 };
 
-// ── INIT ─────────────────────────────────────────────────────
-function init(){
-  const saved=localStorage.getItem("memorix_user");
-  if(saved){try{currentUser=JSON.parse(saved);loadMenu()}catch{showScreen("auth")}}
-  else showScreen("auth");
-}
+// ── CSS ANIMATIONS ────────────────────────────────────────────
+const style=document.createElement("style");
+style.textContent=
+  `@keyframes noteIn{from{opacity:0;transform:scale(.55)}to{opacity:1;transform:scale(1)}}
+   @keyframes scoreFloat{from{opacity:1;transform:translateX(-50%) translateY(0)}to{opacity:0;transform:translateX(-50%) translateY(-60px)}}`;
+document.head.appendChild(style);
 
+// ── AUTH ENTER KEY ────────────────────────────────────────────
 document.addEventListener("keydown",e=>{
   if(e.key!=="Enter") return;
   if(!document.getElementById("screen-auth").classList.contains("active")) return;
-  const loginVisible=!document.getElementById("form-login").classList.contains("hidden");
-  loginVisible?window.handleLogin():window.handleRegister();
+  const lv=!document.getElementById("form-login").classList.contains("hidden");
+  lv?window.handleLogin():window.handleRegister();
 });
 
-// CSS animation para notas SVG
-const style=document.createElement("style");
-style.textContent=`@keyframes noteIn{from{opacity:0;transform:scale(.65) rotate(-15deg)}to{opacity:1;transform:scale(1) rotate(-15deg)}}
-@keyframes scoreFloat{from{opacity:1;transform:translateX(-50%) translateY(0)}to{opacity:0;transform:translateX(-50%) translateY(-50px)}}`;
-document.head.appendChild(style);
-
-init();
+// ── INIT ─────────────────────────────────────────────────────
+initSplash();

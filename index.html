@@ -13,8 +13,23 @@
 <body>
 <canvas id="particles"></canvas>
 
+<!-- ░░ SPLASH DE INICIO ░░ -->
+<div id="screen-splash" class="screen active">
+  <div class="splash-inner">
+    <div class="splash-note-rain" id="splash-rain"></div>
+    <div class="splash-logo">
+      <div class="splash-symbol">𝄞</div>
+      <h1 class="logo-title">MEMORIX</h1>
+      <p class="logo-sub">Escucha · Recuerda · Responde</p>
+      <div class="splash-tagline">El juego de memoria musical</div>
+    </div>
+    <div class="splash-press">Toca para comenzar</div>
+    <p class="credit">Kabert Studio — LMKE</p>
+  </div>
+</div>
+
 <!-- ░░ AUTH ░░ -->
-<div id="screen-auth" class="screen active">
+<div id="screen-auth" class="screen">
   <div class="auth-container">
     <div class="logo-box">
       <div class="logo-symbol">♩</div>
@@ -50,7 +65,7 @@
     </div>
     <p class="welcome-text">Bienvenido, <span id="menu-username"></span></p>
     <div class="menu-buttons">
-      <button class="btn-primary  btn-big" onclick="showModeSelect()">▶ Jugar</button>
+      <button class="btn-primary   btn-big" onclick="showModeSelect()">▶ Jugar</button>
       <button class="btn-secondary btn-big" onclick="showRanking()">⭐ Ranking</button>
       <button class="btn-outline   btn-big" onclick="logout()">✕ Cerrar Sesión</button>
     </div>
@@ -65,13 +80,13 @@
       <div class="mode-card selected" data-mode="clasico" onclick="selectMode('clasico')">
         <div class="mode-icon">🎵</div>
         <div class="mode-name">Clásico</div>
-        <div class="mode-desc">Secuencias que crecen de nivel en nivel. 3 vidas.</div>
+        <div class="mode-desc">Secuencias que crecen nivel a nivel. 3 vidas.</div>
         <div class="mode-pts">+10 pts × nota</div>
       </div>
       <div class="mode-card" data-mode="entrenamiento" onclick="selectMode('entrenamiento')">
         <div class="mode-icon">📚</div>
         <div class="mode-name">Entrenamiento</div>
-        <div class="mode-desc">Sin vidas. Practica las notas que elijas, sin presión.</div>
+        <div class="mode-desc">Sin vidas, sin presión. Practica a tu ritmo.</div>
         <div class="mode-pts">Sin puntuación</div>
       </div>
       <div class="mode-card" data-mode="contrareloj" onclick="selectMode('contrareloj')">
@@ -88,19 +103,14 @@
       </div>
     </div>
 
-    <div class="diff-section" id="diff-section">
+    <div class="diff-section">
       <h3 class="diff-title">Dificultad</h3>
       <div class="diff-buttons">
-        <button class="diff-btn" data-diff="facil"   onclick="selectDiff('facil')">😊 Fácil</button>
+        <button class="diff-btn"        data-diff="facil"   onclick="selectDiff('facil')">😊 Fácil</button>
         <button class="diff-btn active" data-diff="normal"  onclick="selectDiff('normal')">😤 Normal</button>
-        <button class="diff-btn" data-diff="dificil" onclick="selectDiff('dificil')">💀 Difícil</button>
+        <button class="diff-btn"        data-diff="dificil" onclick="selectDiff('dificil')">💀 Difícil</button>
       </div>
-      <p class="diff-desc" id="diff-desc">Notas graves y agudas. Secuencias de longitud media.</p>
-    </div>
-
-    <div class="train-section hidden" id="train-section">
-      <h3 class="diff-title">Notas a practicar</h3>
-      <div class="train-note-picker" id="train-note-picker"></div>
+      <p class="diff-desc" id="diff-desc">Secuencias medias. Notas graves y agudas.</p>
     </div>
 
     <div class="modeselect-actions">
@@ -133,17 +143,17 @@
     </div>
   </div>
 
-  <!-- Badges + estado de secuencia -->
+  <!-- Badges + estado -->
   <div class="mode-badge-row">
     <span class="mode-badge" id="mode-badge">CLÁSICO</span>
     <span class="diff-badge" id="diff-badge">NORMAL</span>
     <span class="seq-status" id="seq-status">Memoriza la secuencia</span>
   </div>
 
-  <!-- Indicadores de progreso de la secuencia (bolitas) -->
+  <!-- Bolitas de progreso -->
   <div class="seq-dots" id="seq-dots"></div>
 
-  <!-- SVG Pentagrama — muestra la secuencia nota a nota -->
+  <!-- SVG Pentagrama -->
   <div class="staff-wrapper">
     <svg id="staff-svg" viewBox="0 0 340 190" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -151,43 +161,60 @@
           <feGaussianBlur stdDeviation="3.5" result="blur"/>
           <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
+        <filter id="glow-green" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="4" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
       </defs>
-
       <!-- Clave de Sol -->
       <text x="10" y="120" font-size="94" fill="#f0b429" font-family="serif" opacity="0.85">𝄞</text>
-
-      <!-- 5 líneas: y = 40,60,80,100,120  (espacio entre líneas = 20px) -->
+      <!-- 5 líneas: y = 40,60,80,100,120 -->
       <line x1="58" x2="325" y1="40"  y2="40"  stroke="rgba(255,255,255,0.28)" stroke-width="1.5"/>
       <line x1="58" x2="325" y1="60"  y2="60"  stroke="rgba(255,255,255,0.28)" stroke-width="1.5"/>
       <line x1="58" x2="325" y1="80"  y2="80"  stroke="rgba(255,255,255,0.28)" stroke-width="1.5"/>
       <line x1="58" x2="325" y1="100" y2="100" stroke="rgba(255,255,255,0.28)" stroke-width="1.5"/>
       <line x1="58" x2="325" y1="120" y2="120" stroke="rgba(255,255,255,0.28)" stroke-width="1.5"/>
-
-      <!-- Ledger lines dinámicas (JS las posiciona) -->
-      <line id="svg-ledger-lo1" display="none" stroke="rgba(255,255,255,0.45)" stroke-width="1.5"/>
-      <line id="svg-ledger-lo2" display="none" stroke="rgba(255,255,255,0.45)" stroke-width="1.5"/>
-      <line id="svg-ledger-hi1" display="none" stroke="rgba(255,255,255,0.45)" stroke-width="1.5"/>
-      <line id="svg-ledger-hi2" display="none" stroke="rgba(255,255,255,0.45)" stroke-width="1.5"/>
-
+      <!-- Ledger lines dinámicas -->
+      <line id="svg-ledger-lo1" display="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.8"/>
+      <line id="svg-ledger-lo2" display="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.8"/>
+      <line id="svg-ledger-hi1" display="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.8"/>
+      <line id="svg-ledger-hi2" display="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.8"/>
       <!-- Cabeza de nota (sin plica) -->
       <ellipse id="svg-note-head" display="none"
         cx="190" cy="80" rx="13" ry="9.5"
         fill="#ffd166" transform="rotate(-15 190 80)"
         filter="url(#glow)"/>
-
-      <!-- Texto de instrucción / fase -->
+      <!-- Texto de fase -->
       <text id="svg-phase-text" x="190" y="175" text-anchor="middle"
         font-family="Orbitron,monospace" font-size="11" fill="#8899bb" display="none"/>
     </svg>
   </div>
 
-  <!-- Flash de feedback -->
   <div class="feedback-flash" id="feedback-flash"></div>
 
-  <!-- Botones de notas — siempre visibles, se bloquean solo en fase show -->
+  <!-- Controles: replay + salir -->
+  <div class="game-controls">
+    <button class="btn-replay" id="btn-replay" onclick="replaySequence()" disabled>
+      🔁 Repetir
+    </button>
+    <button class="btn-outline btn-sm-exit" onclick="confirmExit()">✕ Salir</button>
+  </div>
+
+  <!-- Botones de notas — 14 notas en 2 filas de 7 -->
   <div class="answer-buttons" id="answer-buttons"></div>
 
-  <button class="btn-outline btn-sm-exit" onclick="confirmExit()">✕ Salir</button>
+</div>
+
+<!-- ░░ SPLASH DE NIVEL ░░ -->
+<div id="screen-levelup" class="screen">
+  <div class="levelup-inner">
+    <div class="levelup-stars">⭐⭐⭐</div>
+    <div class="levelup-label">¡NIVEL SUPERADO!</div>
+    <div class="levelup-num" id="lu-num">NIVEL 2</div>
+    <div class="levelup-info" id="lu-info">Ahora la secuencia tiene 2 notas</div>
+    <div class="levelup-score" id="lu-score">+50 pts</div>
+    <div class="levelup-press">Continúa…</div>
+  </div>
 </div>
 
 <!-- ░░ GAME OVER ░░ -->

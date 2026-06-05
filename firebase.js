@@ -7,7 +7,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "TU_API_KEY",
+  apiKey: "AIzaSyAFjwRN9lqlpm1vWDn7tyKLFIBlzFXfRwA",
   authDomain: "memorix-8d3eb.firebaseapp.com",
   projectId: "memorix-8d3eb",
   storageBucket: "memorix-8d3eb.firebasestorage.app",
